@@ -1,0 +1,244 @@
+/* GLOBAL LAYOUT */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  background-color: #faf5f0;
+}
+
+/* NAVBAR */
+.top-nav {
+  background: linear-gradient(135deg, #ffb3d9 0%, #d4b5e8 100%);
+  padding: 0 30px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  box-shadow: 0 4px 15px rgba(220, 150, 200, 0.2);
+}
+.top-nav h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #6b4e71;
+}
+.nav-buttons button {
+  padding: 10px 20px;
+  border: none;
+  background: rgba(255, 255, 255, 0.3);
+  color: #6b4e71;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+.nav-buttons .active {
+  background: #fff;
+  color: #b085b8;
+}
+
+/* MAIN BODY */
+.main-wrapper {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* FLEX CONTAINER SHIFTED LEFT */
+.main-flex {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 15px;
+  padding: 20px;
+  align-items: flex-start;
+  justify-content: center;
+  transform: translateX(-40px);
+}
+
+/* BOXES */
+.left-box,
+.right-box {
+  background: #fff0f5;
+  flex: 0 0 260px;
+  border-radius: 16px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  box-shadow: 0 8px 24px rgba(255, 179, 217, 0.12);
+}
+
+.right-box {
+  background: #f0f5ff;
+}
+
+.label-left,
+.label-right {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+  color: #b085b8;
+}
+.label-right {
+  color: #9ba3d9;
+}
+
+.text-input {
+  width: 100%;
+  padding: 11px;
+  border: 2px solid #e8c5d8;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: 0.3s;
+}
+.text-input:focus {
+  border-color: #ffb3d9;
+  outline: none;
+}
+
+/* BUTTONS */
+.btn-left,
+.btn-right {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: white;
+}
+.btn-left {
+  background: #ffb3d9;
+}
+.btn-right {
+  background: #d4b5e8;
+}
+.btn-left:hover {
+  background: #ff9bc4;
+}
+.btn-right:hover {
+  background: #bfa0d9;
+}
+
+/* RESULT BOXES */
+.output-box-left,
+.output-box-right {
+  padding: 12px;
+  background: #ffe0ed;
+  border-radius: 8px;
+  border-left: 4px solid #ffb3d9;
+}
+.output-box-right {
+  background: #e8e0f5;
+  border-left: 4px solid #d4b5e8;
+}
+
+/* AVATAR CENTER */
+.avatar-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.avatar-frame {
+  background: #fff8fa;
+  border-radius: 16px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(212, 181, 232, 0.15);
+  height: 520px;
+  width: 100%;
+  max-width: 520px;
+}
+.spoken-box {
+  background: #fff8fa;
+  border-radius: 12px;
+  padding: 11px 18px;
+  box-shadow: 0 4px 12px rgba(212, 181, 232, 0.12);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* JOURNAL PAGE */
+.journal-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px;
+}
+.journal-box {
+  background: #fff8fa;
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 8px 24px rgba(212, 181, 232, 0.15);
+  max-width: 600px;
+  width: 100%;
+}
+.journal-title {
+  margin: 0 0 30px 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #b085b8;
+}
+.journal-textarea {
+  width: 100%;
+  height: 300px;
+  padding: 15px;
+  border: 2px solid #e8c5d8;
+  border-radius: 8px;
+  resize: none;
+  font-size: 14px;
+}
+.journal-textarea:focus {
+  border-color: #ffb3d9;
+  outline: none;
+}
+.journal-submit-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #ffb3d9 0%, #d4b5e8 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.journal-submit-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* 📱 RESPONSIVENESS */
+@media (max-width: 900px) {
+  .main-flex {
+    flex-direction: column;
+    transform: translateX(0);
+    overflow-y: auto;
+  }
+  .left-box,
+  .right-box {
+    width: 100%;
+  }
+  .avatar-frame {
+    height: 380px;
+    max-width: 100%;
+  }
+}
+@media (max-width: 480px) {
+  .top-nav h1 {
+    font-size: 18px;
+  }
+  .nav-buttons button {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+  .journal-textarea {
+    height: 220px;
+  }
+}
