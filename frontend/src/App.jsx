@@ -1,7 +1,18 @@
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import Avatar from "./Avatar";
 import TalkingFigure from "./TalkingFigure";
-import { classifyText, generateText } from "./api";
+import { 
+  classifyText, 
+  generateText, 
+  registerUser, 
+  loginUser, 
+  verifyToken, 
+  logout,
+  translateToEnglish,
+  translateToTelugu
+} from "./api";
+
+
 
 export default function App() {
   const [input1, setInput1] = useState("");
@@ -12,19 +23,79 @@ export default function App() {
   const [isTalking, setIsTalking] = useState(false);
   const [activeTab, setActiveTab] = useState("main");
   const [journalText, setJournalText] = useState("");
+  const [situationText, setSituationText] = useState("");
+  const [isTraining, setIsTraining] = useState(false);
+  const [trainStatus, setTrainStatus] = useState("");
+  const [user, setUser] = useState(null);
+  const [authMode, setAuthMode] = useState("login"); // login or register
+  const [authData, setAuthData] = useState({
+    username: "",
+    password: ""
+  });
+  const [outputLanguage, setOutputLanguage] = useState("english"); // "english" or "telugu"
+const BASE_CLASSIFICATION = "https://CLASSIFICATION_NGROK";
+const BASE_NLP = "https://dichasial-nonextensive-ayaan.ngrok-free.dev";
 
-  const triggerTalking = (text) => {
-    setSpokenText(text);
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.rate = 1.0;
-    utter.pitch = 1.0;
-    utter.volume = 1.0;
-
-    utter.onstart = () => setIsTalking(true);
-    utter.onend = () => setIsTalking(false);
-
-    window.speechSynthesis.speak(utter);
+  // Verify token on app load
+useEffect(() => {
+  const checkAuth = async () => {
+    const result = await verifyToken();
+    if (result && result.valid) {
+      setUser(result.user);
+    }
   };
+  checkAuth();
+}, []);
+
+
+
+
+  // const triggerTalking = (text) => {
+  //   setSpokenText(text);
+  //   const utter = new SpeechSynthesisUtterance(text);
+  //   utter.rate = 1.0;
+  //   utter.pitch = 1.0;
+  //   utter.volume = 1.0;
+
+  //   utter.onstart = () => setIsTalking(true);
+  //   utter.onend = () => setIsTalking(false);
+
+  //   window.speechSynthesis.speak(utter);
+  // };
+
+  const triggerTalking = async (text) => {
+  let textToSpeak = text;
+
+  if (outputLanguage === "telugu") {
+    const translation = await translateToTelugu(text);
+    textToSpeak = translation.translated;
+  }
+
+  setSpokenText(textToSpeak);
+
+  const res = await fetch("http://localhost:5000/api/tts", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      text: textToSpeak,
+      lang: outputLanguage === "telugu" ? "te" : "en"
+    })
+  });
+
+  const blob = await res.blob();
+  const audioUrl = URL.createObjectURL(blob);
+
+  const audio = new Audio(audioUrl);
+  audio.playbackRate = 1.5;
+
+  // 🔥 THIS IS THE FIX
+  audio.onplay = () => setIsTalking(true);
+  audio.onended = () => setIsTalking(false);
+
+  audio.play();
+};
 
   const doClassify = async () => {
     const result = await classifyText(input1);
@@ -33,15 +104,219 @@ export default function App() {
   };
 
   const doGenerate = async () => {
-    const result = await generateText(input2);
+    // print("reached here")
+    const result = await generateText(user.id,input2); 
+    //const result = await generateText(input2);
     setGeneratedOutput(result);
     triggerTalking(result);
   };
+const handleAuth = async () => {
+  if (!authData.username || !authData.password) {
+    alert("Enter username and password");
+    return;
+  }
 
-  const submitJournal = () => {
-    triggerTalking(`You wrote: ${journalText}`);
+  try {
+    if (authMode === "register") {
+      const result = await registerUser(authData.username, authData.password);
+      alert("Registered successfully! Please login.");
+      setAuthMode("login");
+      // setAuthData({ username: "", password: "" });
+    } else {
+      const result = await loginUser(authData.username, authData.password);
+      setUser(result.user);
+    }
+  } catch (error) {
+    const errorMsg = error.response?.data?.error || "Authentication failed";
+    alert(errorMsg);
+  }
+};
+
+const handleLogout = () => {
+  logout();
+  setUser(null);
+};
+
+// const submitJournal = async () => {
+//   if (!journalText.trim() || !situationText.trim()) {
+//     alert("Please fill both situation and journal");
+//     return;
+//   }
+
+//   try {
+//     const response = await fetch(
+//       "https://da4a2f17ca90.ngrok-free.app/submit",
+//       {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json"
+//         },
+//         body: JSON.stringify({
+//           user_id: user.id, // later replace with real user id
+//           journals: [
+//             {
+//               sentence: situationText,
+//               journal: journalText,
+//               label: "Neutral" // or auto-assign later
+//             }
+//           ]
+//         })
+//       }
+//     );
+
+//     const data = await response.json();
+//     console.log(data);
+
+//     alert("Journal stored successfully ✨");
+
+//     // clear fields
+//     setSituationText("");
+//     setJournalText("");
+
+//   } catch (err) {
+//     console.error(err);
+//     alert("Failed to submit journal");
+//   }
+// };
+
+const submitJournal = async () => {
+  if (!journalText.trim() || !situationText.trim()) {
+    alert("Please fill both situation and journal");
+    return;
+  }
+
+  try {
+    // Translate Telugu to English if needed
+    const situationTranslation = await translateToEnglish(situationText);
+    const journalTranslation = await translateToEnglish(journalText);
+    console.log("Translated Situation:", situationTranslation);
+    console.log("Translated Journal:", journalTranslation);
+    const response = await fetch(
+      "https://1066-34-126-134-108.ngrok-free.app/submit",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          journals: [
+            {
+              sentence: situationTranslation.translated,
+              journal: journalTranslation.translated,
+              label: "Neutral"
+            }
+          ]
+        })
+      }
+    );
+
+    const data = await response.json();
+    console.log(data);
+
+    alert("Journal stored successfully ✨");
+
+    setSituationText("");
     setJournalText("");
-  };
+
+  } catch (err) {
+    console.error(err);
+    alert("Failed to submit journal");
+  }
+};
+
+const submitForNLP = async () => {
+  if (!journalText.trim() || !situationText.trim()) {
+    alert("Fill both fields");
+    return;
+  }
+
+  try {
+    const situationTranslation = await translateToEnglish(situationText);
+    const journalTranslation = await translateToEnglish(journalText);
+
+    const res = await fetch(`${BASE_NLP}/submitnlpnew`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        user_id: user.id,
+        journals: [
+          {
+            sentence: situationTranslation.translated,
+            journal: journalTranslation.translated
+          }
+        ]
+      })
+    });
+
+    await res.json();
+    alert("✅ Saved for NLP Model");
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ Failed");
+  }
+};
+
+const trainModel = async () => {
+  setIsTraining(true);
+  setTrainStatus("Training started… this may take a minute ⏳");
+
+  try {
+    const res = await fetch(
+      "https://da4a2f17ca90.ngrok-free.app/train_model",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          user_id: user.id
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || "Training failed");
+    }
+
+    setTrainStatus("✅ Model trained successfully!");
+  } catch (err) {
+    console.error(err);
+    setTrainStatus("❌ Training failed. Try again.");
+  } finally {
+    setIsTraining(false);
+  }
+};
+const trainNLPModel = async () => {
+  setIsTraining(true);
+  setTrainStatus("Training NLP Model...");
+
+  try {
+    const res = await fetch(`${BASE_NLP}/train_model`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        user_id: user.id
+      })
+    });
+
+    await res.json();
+    setTrainStatus("✅ NLP Model Trained");
+
+  } catch (err) {
+    console.error(err);
+    setTrainStatus("❌ Failed");
+  } finally {
+    setIsTraining(false);
+  }
+};
 
   return (
     <>
@@ -221,6 +496,84 @@ export default function App() {
       `}</style>
 
       <div className="app-container">
+
+{!user ? (
+
+<div style={{
+display:"flex",
+justifyContent:"center",
+alignItems:"center",
+height:"100vh"
+}}>
+
+<div style={{
+background:"#9c7b84",
+padding:"40px",
+borderRadius:"12px",
+width:"320px"
+}}>
+
+<h2>{authMode === "login" ? "Login" : "Register"}</h2>
+
+<input
+placeholder="Username"
+className="input-field"
+onChange={(e)=>
+setAuthData({
+...authData,
+username:e.target.value
+})
+}
+/>
+
+<input
+type="password"
+placeholder="Password"
+className="input-field"
+onChange={(e)=>
+setAuthData({
+...authData,
+password:e.target.value
+})
+}
+/>
+
+<button
+className="action-btn"
+style={{background:"#D4B5E8"}}
+onClick={handleAuth}
+>
+{authMode === "login" ? "Login" : "Register"}
+</button>
+
+<p
+style={{
+marginTop:"10px",
+cursor:"pointer",
+color:"#1d022e"
+}}
+onClick={()=>
+setAuthMode(
+authMode==="login"
+?"register"
+:"login"
+)
+}
+>
+
+{authMode==="login"
+?"Create account"
+:"Already have account?"}
+
+</p>
+
+</div>
+
+</div>
+
+) :(
+        
+        <>
         {/* Navbar */}
         <nav className="navbar">
           <h1 className="nav-title">Avatar Studio</h1>
@@ -245,6 +598,18 @@ export default function App() {
             >
               Journal
             </button>
+            <button
+  onClick={() => setOutputLanguage(outputLanguage === "english" ? "telugu" : "english")}
+  className="nav-btn"
+  style={{
+    backgroundColor: "#fff",
+    color: "#B085B8",
+    marginLeft: "auto"
+  }}
+>
+  🌐 {outputLanguage === "english" ? "తెలుగు" : "English"}
+</button>
+
           </div>
         </nav>
 
@@ -278,8 +643,19 @@ export default function App() {
                       {classificationResult}
                     </p>
                   </div>
+                  
                 )}
+                {/* <button
+                    className="action-btn"
+                    onClick={doGenerate}
+                    style={{ backgroundColor: "#D4B5E8" }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = "#BFA0D9"}
+                    onMouseOut={(e) => e.target.style.backgroundColor = "#D4B5E8"}
+                  >
+                    Click for Telugu
+                  </button> */}
               </div>
+              
 
               {/* Avatar Center (Now flexed with max width constraints) */}
               <div className="avatar-section">
@@ -292,12 +668,15 @@ export default function App() {
                     boxShadow: "0 4px 12px rgba(212, 181, 232, 0.12)", textAlign: "center", width: "100%"
                   }}>
                     <p style={{ margin: 0, fontSize: "12px", color: "#8B6B9F", fontStyle: "italic" }}>
+                     <p style={{ margin: 0, fontSize: "12px", color: "#B085B8", fontWeight: "600" }}>
+    Output Language: {outputLanguage === "english" ? "English 🇬🇧" : "తెలుగు 🇮🇳"}
+  </p>
                       "{spokenText}"
                     </p>
                   </div>
                 )}
               </div>
-
+                
               {/* NLP Box - Right */}
               <div className="sidebar-box blue">
                 <div>
@@ -320,7 +699,18 @@ export default function App() {
                   >
                     Generate
                   </button>
+                  
+                  
                 </div>
+                {/* <button
+                    className="action-btn"
+                    onClick={doGenerate}
+                    style={{ backgroundColor: "#D4B5E8" }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = "#BFA0D9"}
+                    onMouseOut={(e) => e.target.style.backgroundColor = "#D4B5E8"}
+                  >
+                    Click for Telugu
+                  </button> */}
                 {generatedOutput && (
                   <div style={{ padding: "12px", backgroundColor: "#E8E0F5", borderRadius: "8px", borderLeft: "4px solid #D4B5E8" }}>
                     <p style={{ margin: 0, fontSize: "13px", color: "#6B4E71" }}>
@@ -329,34 +719,180 @@ export default function App() {
                   </div>
                 )}
               </div>
+              
             </div>
-          ) : (
-            <div className="journal-layout">
-              <div className="journal-box">
-                <h2 style={{ margin: "0 0 30px 0", fontSize: "28px", fontWeight: "600", color: "#B085B8" }}>Journal Entry</h2>
-                <textarea
-                  value={journalText}
-                  onChange={(e) => setJournalText(e.target.value)}
-                  placeholder="Write your thoughts, feelings, and experiences..."
-                  style={{
-                    width: "100%", height: "300px", padding: "15px", border: "2px solid #E8C5D8",
-                    borderRadius: "8px", fontSize: "14px", resize: "none", marginBottom: "20px",
-                    color: "#6B4E71", fontFamily: "inherit"
-                  }}
-                />
-                <button
-                  onClick={submitJournal}
-                  style={{
-                    width: "100%", padding: "14px", background: "linear-gradient(135deg, #FFB3D9 0%, #D4B5E8 100%)",
-                    color: "#fff", border: "none", borderRadius: "8px", fontWeight: "600", cursor: "pointer", fontSize: "16px"
-                  }}
-                >
-                  Submit Journal Entry
-                </button>
-              </div>
-            </div>
-          )}
+          ) :(
+  <div className="journal-layout">
+    <div className="journal-box">
+
+      {/* Situation */}
+      <h2
+        style={{
+          margin: "0 0 15px 0",
+          fontSize: "22px",
+          fontWeight: "600",
+          color: "#9A6BA0"
+        }}
+      >
+        Situation
+      </h2>
+
+      <textarea
+        value={situationText}
+        onChange={(e) => setSituationText(e.target.value)}
+        placeholder="Briefly describe what happened..."
+        style={{
+          width: "100%",
+          height: "120px",
+          padding: "15px",
+          border: "2px solid #E8C5D8",
+          borderRadius: "8px",
+          fontSize: "14px",
+          resize: "none",
+          marginBottom: "30px",
+          color: "#6B4E71",
+          fontFamily: "inherit",
+          backgroundColor: "#FFF7FB"
+        }}
+      />
+
+      {/* Journal */}
+      <h2
+        style={{
+          margin: "0 0 30px 0",
+          fontSize: "28px",
+          fontWeight: "600",
+          color: "#B085B8"
+        }}
+      >
+        Journal Entry
+      </h2>
+
+      <textarea
+        value={journalText}
+        onChange={(e) => setJournalText(e.target.value)}
+        placeholder="Write your thoughts, feelings, and experiences..."
+        style={{
+          width: "100%",
+          height: "300px",
+          padding: "15px",
+          border: "2px solid #E8C5D8",
+          borderRadius: "8px",
+          fontSize: "14px",
+          resize: "none",
+          marginBottom: "20px",
+          color: "#6B4E71",
+          fontFamily: "inherit",
+          backgroundColor: "#FFF7FB"
+        }}
+      />
+
+      <button
+        onClick={submitJournal}
+        style={{
+          width: "100%",
+          padding: "14px",
+          background: "linear-gradient(135deg, #FFB3D9 0%, #D4B5E8 100%)",
+          color: "#fff",
+          border: "none",
+          borderRadius: "8px",
+          fontWeight: "600",
+          cursor: "pointer",
+          fontSize: "16px"
+        }}
+      >
+        Submit Journal Entry For Classification
+      </button>
+      {/* Train Model Button */}
+<button
+  onClick={trainModel}
+  disabled={isTraining}
+  style={{
+    width: "100%",
+    padding: "14px",
+    marginTop: "15px",
+    marginBottom: "10px",
+    background: isTraining
+      ? "#E0CFE8"
+      : "linear-gradient(135deg, #B5A1E8 0%, #8B6FD8 100%)",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontWeight: "600",
+    cursor: isTraining ? "not-allowed" : "pointer",
+    fontSize: "16px",
+    opacity: isTraining ? 0.8 : 1
+  }}
+>
+  {isTraining ? "Training Model…" : "Train Classification Model"}
+</button>
+<br></br>
+<button onClick={submitForNLP} style={{
+          width: "100%",
+          padding: "14px",
+          background: "linear-gradient(135deg, #FFB3D9 0%, #D4B5E8 100%)",
+          color: "#fff",
+          border: "none",
+          borderRadius: "8px",
+          fontWeight: "600",
+          cursor: "pointer",
+          fontSize: "16px"
+        }}>
+  Submit input-output for NLP
+</button>
+<button onClick={trainNLPModel} disabled={isTraining} style={{
+    width: "100%",
+    padding: "14px",
+    marginTop: "15px",
+    background: isTraining
+      ? "#E0CFE8"
+      : "linear-gradient(135deg, #B5A1E8 0%, #8B6FD8 100%)",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontWeight: "600",
+    cursor: isTraining ? "not-allowed" : "pointer",
+    fontSize: "16px",
+    opacity: isTraining ? 0.8 : 1
+  }}>
+  Train NLP Model
+</button>
+{trainStatus && (
+  <p
+    style={{
+      marginTop: "12px",
+      fontSize: "14px",
+      color: trainStatus.startsWith("✅")
+        ? "#4CAF50"
+        : trainStatus.startsWith("❌")
+        ? "#E53935"
+        : "#6B4E71",
+      textAlign: "center"
+    }}
+  >
+    {trainStatus}
+  </p>
+)}
+
+    </div>
+  </div>
+)
+}
         </div>
+        <button
+onClick={handleLogout}
+style={{
+position:"absolute",
+top:"20px",
+right:"20px"
+}}
+>
+Logout
+</button>
+
+</>
+
+)}
       </div>
     </>
   );
