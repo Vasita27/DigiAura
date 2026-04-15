@@ -8,6 +8,8 @@ client = MongoClient(Config.MONGO_URI)
 db = client["moral_ai"]
 # ✅ Collections
 users_collection = db["users"]
+journals_collection = db["journals"]
+journals_nlp_collection = db["journals_nlp"]
 
 def create_user(username, password):
     """Create a new user with hashed password"""
@@ -44,3 +46,14 @@ def get_user_by_id(user_id):
     except:
         return None
     return None
+def delete_user_data(user_id):
+    """Delete all data of a user from journals and journals_nlp"""
+
+    res1 = journals_collection.delete_many({"user_id": user_id})
+    res2 = journals_nlp_collection.delete_many({"user_id": user_id})
+
+    return {
+        "user_id": user_id,
+        "journals_deleted": res1.deleted_count,
+        "journals_nlp_deleted": res2.deleted_count
+    }

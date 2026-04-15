@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const BASE = "http://127.0.0.1:5000";
-const NGROK = "https://dichasial-nonextensive-ayaan.ngrok-free.dev"; //shud be actual trained model url
+const NGROK = "https://countdown-slicing-starved.ngrok-free.dev/"; //shud be actual trained model url
+const CLASSIFY_NGROK = "https://0a43-34-75-162-175.ngrok-free.app"; //shud be actual trained model url
 
 // Get token from localStorage
 const getToken = () => localStorage.getItem('token');
@@ -74,18 +75,18 @@ export const classifyText = async (text) => {
   return res.data.label;
 };
 
-export const generateText = async (userid,text) => {
-  const res = await axios.post(`${NGROK}/predictnlpfuncn`, { user_id: userid , text: text });
-  console.log("Input to NLP:", res.data);
-  console.log("Generateds text:", res.data.response);
-  return res.data.response;
-};
-
-// export const generateText = async (text) => {
-//   const res = await axios.post(`${NGROK}/generatenew`, { text });
+// export const generateText = async (userid,text) => {
+//   const res = await axios.post(`${NGROK}/predictnlpfuncn`, { user_id: userid , text: text });
+//   console.log("Input to NLP:", res.data);
 //   console.log("Generateds text:", res.data.response);
 //   return res.data.response;
 // };
+
+export const generateText = async (text) => {
+  const res = await axios.post(`${NGROK}/generate`, { text });
+  console.log("Generateds text:", res.data.response);
+  return res.data.response;
+};
 
 
 

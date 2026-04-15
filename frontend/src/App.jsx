@@ -35,7 +35,7 @@ export default function App() {
   const [outputLanguage, setOutputLanguage] = useState("english"); // "english" or "telugu"
 const BASE_CLASSIFICATION = "https://CLASSIFICATION_NGROK";
 const BASE_NLP = "https://dichasial-nonextensive-ayaan.ngrok-free.dev";
-
+const CLASSIFY_NGROK = "https://aa7b-34-75-162-175.ngrok-free.app"; //shud be actual trained model url
   // Verify token on app load
 useEffect(() => {
   const checkAuth = async () => {
@@ -105,8 +105,8 @@ useEffect(() => {
 
   const doGenerate = async () => {
     // print("reached here")
-    const result = await generateText(user.id,input2); 
-    //const result = await generateText(input2);
+    //const result = await generateText(user.id,input2); 
+    const result = await generateText(input2);
     setGeneratedOutput(result);
     triggerTalking(result);
   };
@@ -192,7 +192,7 @@ const submitJournal = async () => {
     console.log("Translated Situation:", situationTranslation);
     console.log("Translated Journal:", journalTranslation);
     const response = await fetch(
-      "https://1066-34-126-134-108.ngrok-free.app/submit",
+      `${CLASSIFY_NGROK}/submit`,
       {
         method: "POST",
         headers: {
@@ -266,7 +266,7 @@ const trainModel = async () => {
 
   try {
     const res = await fetch(
-      "https://da4a2f17ca90.ngrok-free.app/train_model",
+      `${CLASSIFY_NGROK}/train_model_v2`,
       {
         method: "POST",
         headers: {
@@ -315,6 +315,32 @@ const trainNLPModel = async () => {
     setTrainStatus("❌ Failed");
   } finally {
     setIsTraining(false);
+  }
+};
+
+const deleteUserData = async (userId) => {
+  try {
+    const res = await fetch("http://localhost:5000/delete-user-data", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        user_id: user.id
+      })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      alert("User data deleted successfully");
+      console.log(data);
+    } else {
+      alert(data.error || "Error deleting data");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Server error");
   }
 };
 
@@ -889,10 +915,17 @@ right:"20px"
 >
 Logout
 </button>
-
+<button onClick={() => deleteUserData(user.id)} style={{
+position:"absolute",
+top:"20px",
+right:"150px"
+}}>
+  Delete My Data
+</button>
 </>
 
 )}
+
       </div>
     </>
   );

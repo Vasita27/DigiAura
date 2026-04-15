@@ -8,7 +8,7 @@ import os
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from config import Config
-from models import create_user, find_user_by_username, verify_password, get_user_by_id
+from models import create_user, find_user_by_username, verify_password, get_user_by_id, delete_user_data
 from translator import translate_to_english, translate_to_telugu, detect_language
 app = Flask(__name__)
 CORS(app)
@@ -173,6 +173,21 @@ def text_to_speech():
 
     except Exception as e:
         return {"error": str(e)}, 500
+    
+@app.route('/delete-user-data', methods=['DELETE'])
+def delete_user_data_route():
+    data = request.get_json()
+    user_id = data.get("user_id")
+
+    if not user_id:
+        return jsonify({"error": "user_id is required"}), 400
+
+    result = delete_user_data(user_id)
+
+    return jsonify({
+        "message": "User data deleted successfully",
+        **result
+    })
 
 @app.get("/")
 def ping():
